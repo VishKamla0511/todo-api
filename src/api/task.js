@@ -5,27 +5,45 @@ const router = express.Router();
 
 const createTask = async (req, res, next) => {
     try {
-        // const { id } = req.headers;
-        console.log("task created")
         const { name, description, due_date, status } = req.body
 
-        // if (!req.body.name) {
-        //     res.send({
-        //         message: "name is required"
-        //     })
-        // }
+        if (!name) {
+            res.status(400).send({
+                message: "name is required"
+            })
+        }
 
-        // if (!req.body.description) {
-        //     res.send({
-        //         message: "phone number is required"
-        //     })
-        // }
+        if (!description) {
+            res.status(400).send({
+                message: "description is required"
+            })
+        }
 
-        const sqlstr = `insert into tasks (name, description, due_date, status) values (?,?,?,?)`
-        const [results] = await connection.promise().query(sqlstr, [name, description, due_date, status]);
+        if (!due_date) {
+            res.status(400).send({
+                message: "due is required"
+            })
+        }
+
+        if (!status ) {
+            res.status(400).send({
+                message: "status is required and it should be incomplete or complete"
+            })
+            return;
+        }
+
+        if  (status !== "incomplete" && status !== "complete") {
+            res.status(400).send({
+                message: "status is required and it should be incomplete or complete"
+            })
+            return;
+        }
+
+        const queryString = `insert into tasks (name, description, due_date, status) values (?,?,?,?)`
+        const [results] = await connection.promise().query(queryString, [name, description, due_date, status]);
 
         if (!results.affectedRows) {
-            res.send({
+            res.status(500).send({
                 message: "data not inserted"
             })
         }
@@ -107,16 +125,14 @@ const updateTask = async (req, res, next) => {
     }
 }
 
-const gettaskDetails = async (req, res, next) => {
+const getTasks = async (req, res, next) => {
     try {
-        console.log("task show")
-        const { due_date,status,status_sort,due_date_sort } = req.query
+        let { due_date,status,status_sort,due_date_sort, limit, offset } = req.query
 
-        // if (!req.query) {
-        //     res.status(400).send({
-        //         message: "Bad Request"
-        //     })
-        // }
+        if (!limit && !offset) {
+            limit = 10;
+            offset = 1;
+        }
 
         let orderArr = [];
         let orderData = [];
@@ -138,24 +154,30 @@ const gettaskDetails = async (req, res, next) => {
             orderString = `order by ${orderArr.join(',')}`
         }
 
-        const sql = `select name, description, due_date, status from tasks ${orderString} limit 2 offset 1`;
 
-        const [results] = await connection.promise().execute(sql, [...orderData]);
+
+        const queryString = `select name, description, due_date, status from tasks ${orderString} limit ${limit} offset ${offset}`;
+
+        const [results] = await connection.promise().execute(queryString, [...orderData]);
+
+        const contQueryString = `select count(1) as count from tasks ${orderString}`;
+
+        const [countResults] = await connection.promise().execute(contQueryString, [...orderData]);
 
         res.status(200).send({
             message: "tasks lists",
-            Data: results[0]
+            response: results,
+            count: countResults[0].count || null
         })
 
     } catch (error) {
-        console.log(error);
         res.status(500).send({
             message: "internal server error",
         })
     }
 }
 
-const gettaskById = async (req, res, next) => {
+const getTaskById = async (req, res, next) => {
     try {
         const { id } = req.params;
 
@@ -187,10 +209,9 @@ const gettaskById = async (req, res, next) => {
     }
 }
 
-router.get("/", gettaskDetails);
-router.get("/:id", gettaskById);
-
-router.put("/edit/:id", updateTask)
-router.post("/add", createTask)
+router.get("/", getTasks);
+router.post("/", createTask);
+router.get("/:id", getTaskById);
+router.put("/:id", updateTask);
 
 module.exports = router;

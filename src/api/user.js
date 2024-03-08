@@ -7,9 +7,8 @@ const saltRounds = 5;
 
 const router = express.Router();
 
-const registereuser = async (req, res, next) => {
+const signup = async (req, res, next) => {
     try {
-        console.log("Register user")
         const { email, password } = req.body
 
         if (!email) {
@@ -24,15 +23,14 @@ const registereuser = async (req, res, next) => {
             })
         }
 
-        const sqlstr = `insert into users (email, password) values (?,?)`
+        const queryString = `insert into users (email, password) values (?,?)`
 
-        console.log({ password, saltRounds })
         const hashPassword = await bcrypt.hash(password, saltRounds) //encrypt password and store in database
 
-        const [results] = await connection.promise().query(sqlstr, [email, hashPassword]);
+        const [results] = await connection.promise().query(queryString, [email, hashPassword]);
 
         if (!results.insertId) {
-            res.send({
+            res.status(500).send({
                 message: "data not inserted"
             })
         }
@@ -55,22 +53,22 @@ const login = async (req, res, next) => {
         const { email, password } = req.body;
 
         if (!email) {
-            res.send({
+            res.status(400).send({
                 message: "email required"
             })
         }
 
         if (!password) {
-            res.send({
+            res.status(400).send({
                 message: "password required"
             })
         }
 
-        const sql = `select user_id,email,password from users where email = ? `;
-        const [results] = await connection.promise().execute(sql, [email]);
+        const queryString = `select user_id,email,password from users where email = ? `;
+        const [results] = await connection.promise().execute(queryString, [email]);
 
         if (results.length == 0) {
-            res.send({
+            res.status(400).send({
                 message: "wrong password"
             })
         }
@@ -79,18 +77,13 @@ const login = async (req, res, next) => {
         const match = await bcrypt.compare(password, hashPassword); //decrypt password
 
         if (!match) {
-            res.send({
+            res.status(400).send({
                 message: "email or password are incorrect please try again"
             })
         }
 
         let token = jwt.sign({ user_id: results[0].user_id }, 'server'); //generate token
         console.log(token);
-
-        res.status(200).send({
-            message: "login succesful",
-            validToken: token
-        })
 
         res.status(200).send({
             message: "successfully login",
@@ -106,6 +99,6 @@ const login = async (req, res, next) => {
 }
 
 router.post("/login", login)
-router.post("/register", registereuser);
+router.post("/signup", signup);
 
 module.exports = router;
