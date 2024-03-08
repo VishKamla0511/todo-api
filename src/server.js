@@ -6,8 +6,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const user = require('./user');
-const task = require('./task')
+const user = require('./api/user');
+const task = require('./api/task')
 
 app.use('/user',user);
 app.use('/task', task);
