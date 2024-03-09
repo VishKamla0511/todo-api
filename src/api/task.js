@@ -32,6 +32,7 @@ const createTask = async (req, res, next) => {
             return;
         }
 
+        console.log({status});
         if  (status !== "incomplete" && status !== "complete") {
             res.status(400).send({
                 message: "status is required and it should be incomplete or complete"
@@ -64,7 +65,10 @@ const createTask = async (req, res, next) => {
 const updateTask = async (req, res, next) => {
     try {
         const { id } = req.params
+        console.log(id);
         const { name, description, due_date, status } = req.body
+
+        console.log("update task")
 
         if ((!id)) {
             res.send({
@@ -130,7 +134,7 @@ const getTasks = async (req, res, next) => {
         let { due_date,status,status_sort,due_date_sort, limit, offset } = req.query
 
         if (!limit && !offset) {
-            limit = 10;
+            limit = 30;
             offset = 1;
         }
 
@@ -154,9 +158,7 @@ const getTasks = async (req, res, next) => {
             orderString = `order by ${orderArr.join(',')}`
         }
 
-
-
-        const queryString = `select name, description, due_date, status from tasks ${orderString} limit ${limit} offset ${offset}`;
+        const queryString = `select id, name, description, due_date, status from tasks ${orderString} limit ${limit} offset ${offset}`;
 
         const [results] = await connection.promise().execute(queryString, [...orderData]);
 
